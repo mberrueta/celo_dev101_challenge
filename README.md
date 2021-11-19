@@ -5,8 +5,16 @@
 [Local Celo development](https://docs.celo.org/developer-guide/development-chain) blockchain running exposed at `http://localhost:7545`
 
 ```sh
-npm install --save-dev @terminal-fi/celo-devchain
-npx celo-devchain --port 7545
+# doesn't work for me
+# npm install --save-dev @terminal-fi/celo-devchain
+# npx celo-devchain --port 7545
+
+yarn add --dev @terminal-fi/celo-devchain
+yarn run celo-devchain --port 7545
+
+# OR with docker
+docker build -t celo_blockchain .
+docker rmi celo_blockchain
 ```
 
 ## Setup

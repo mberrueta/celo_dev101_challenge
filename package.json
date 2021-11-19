@@ -1,5 +1,8 @@
 {
   "dependencies": {
     "@truffle/hdwallet-provider": "^1.7.0"
+  },
+  "devDependencies": {
+    "@terminal-fi/celo-devchain": "^3.4.0"
   }
 }
