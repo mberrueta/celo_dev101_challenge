@@ -1,8 +1,15 @@
 {
+  "name": "celo-challenge",
+  "version": "0.1.0",
+  "description": "Celo Token Staking App",
+  "author": "matiasberrueta@gmail.com",
   "dependencies": {
-    "@truffle/hdwallet-provider": "^1.7.0"
-  },
-  "devDependencies": {
-    "@terminal-fi/celo-devchain": "^3.4.0"
+    "@truffle/hdwallet-provider": "^1.7.0",
+    "bootstrap": "^5.1.3",
+    "chai": "^4.3.4",
+    "chai-as-promised": "^7.1.1",
+    "chai-bignumber": "^3.0.0",
+    "react": "^17.0.2",
+    "web3": "^1.6.1"
   }
 }
