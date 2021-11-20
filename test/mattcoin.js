@@ -6,22 +6,22 @@ const MattCoin = artifacts.require("MattCoin");
 //    And provides a list of accounts made available by your Ethereum client
 // accounts = [owner, investor_a, investor_b] :)
 contract("MattCoin", ([owner, investor_a, investor_b]) => {
-  describe(".deployed", async () => {
-    context("when is created", async () => {
-      it("has default values", async () => {
-        MattCoin.new()
-          .then((mc) => mc.name)
-          .then((name) => assert.equal(name, "Matt Token"))
-          .then((mc) => mc.symbol)
-          .then((symbol) => assert.equal(symbol, "MATT"))
-          .then((mc) => mc.totalSupply)
-          .then((totalSupply) =>
-            assert.equal(totalSupply, 1000000000000000000000000)
-          );
-      });
+  context("when is created", async () => {
+    it("has default values", async () => {
+      MattCoin.new()
+      .then((mc) => mc.name)
+      .then((name) => assert.equal(name, "Matt Token"))
+      .then((mc) => mc.symbol)
+      .then((symbol) => assert.equal(symbol, "MATT"))
+      .then((mc) => mc.totalSupply)
+      .then((totalSupply) =>
+      assert.equal(totalSupply, 1000000000000000000000000)
+      );
     });
+  });
 
-    context("when is deployed", async () => {
+  context("when is deployed", async () => {
+    describe(".balanceOf", async () => {
       it("put 10000 MattCoin in the first account", async () => {
         MattCoin.deployed()
           .then((mc) => mc.balanceOf(investor_a))
