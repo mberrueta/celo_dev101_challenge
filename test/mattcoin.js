@@ -51,11 +51,9 @@ contract("MattCoin", ([owner, investor_a, investor_b]) => {
         assert.equal(balance, 10, "second account doesn't have 10 coins");
       });
 
-      // it("reject send coins to A", async () => {
-      //   await mattCoin.transfer(owner, 10);
-      //   let balance = await mattCoin.balanceOf(investor_a);
-      //   assert.equal(balance, 10, "second account doesn't have 10 coins");
-      // });
+      it("reject send coins to A", async () => {
+        await mattCoin.transfer(owner, 1).should.be.rejected;
+      });
     });
 
   });
