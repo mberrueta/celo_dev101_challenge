@@ -2,9 +2,7 @@ const MattCoin = artifacts.require("MattCoin");
 
 import { assert } from "chai";
 
-require("chai")
-  .use(require("chai-as-promised"))
-  .should();
+require("chai").use(require("chai-as-promised")).should();
 
 // Before each contract() function is run,
 //    your contracts are redeployed to the running Ethereum client
@@ -51,10 +49,10 @@ contract("MattCoin", ([owner, investor_a, investor_b]) => {
         assert.equal(balance, 10, "second account doesn't have 10 coins");
       });
 
-      it("reject send coins to A", async () => {
-        await mattCoin.transfer(owner, 1).should.be.rejected;
+      it("reject send coins to 0 address", async () => {
+        zero_address = 0x0000000000000000000000000000000000000000
+        await mattCoin.transfer(zero_address, 1).should.be.rejected;
       });
     });
-
   });
 });

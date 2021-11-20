@@ -12,6 +12,9 @@ contract MattCoin is IERC20 {
     mapping(address => uint256) private _balances;
     mapping(address => mapping(address => uint256)) private _allowances;
 
+    event LogString(string _value);
+    event LogAddress(address _value);
+
     constructor() {
       // deployer owner of all
         _balances[msg.sender] = _totalSupply;
@@ -93,6 +96,8 @@ contract MattCoin is IERC20 {
         address recipient,
         uint256 amount
     ) internal virtual {
+        emit LogAddress(sender);
+        emit LogAddress(address(0));
         require(sender != address(0), "ERC20: transfer from the zero address");
         require(recipient != address(0), "ERC20: transfer to the zero address");
 
