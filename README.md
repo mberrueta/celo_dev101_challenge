@@ -39,7 +39,7 @@ Sadly the errors doesn't prompt very well, so instead I started with [Ganache](h
 
 ```sh
 npm install @truffle/hdwallet-provider --save
-truffle init
+truffle **init**
 
 echo "
 MNEMONIC='here you super secret alfajores keys'
@@ -98,4 +98,11 @@ truffle deploy --network alfajores
 
 ```sh
 truffle create contract MattCoin
+```
+
+## Test
+
+```sh
+truffle test
+truffle console # JS dev environment
 ```

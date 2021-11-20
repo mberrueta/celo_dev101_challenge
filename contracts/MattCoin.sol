@@ -12,6 +12,11 @@ contract MattCoin is IERC20 {
     mapping(address => uint256) private _balances;
     mapping(address => mapping(address => uint256)) private _allowances;
 
+    constructor() {
+      // deployer owner of all
+        _balances[msg.sender] = _totalSupply;
+    }
+
     function name() public view virtual returns (string memory) {
         return _name;
     }
