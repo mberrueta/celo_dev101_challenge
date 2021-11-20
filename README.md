@@ -103,6 +103,8 @@ truffle create contract MattCoin
 ## Test
 
 ```sh
+# --stacktrace  (will produce trace for transactions)
+# --stacktrace-extra (will turn on compile traces)
 truffle test
 truffle console # JS dev environment
 ```
