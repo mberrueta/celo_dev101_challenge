@@ -108,3 +108,7 @@ truffle create contract MattCoin
 truffle test
 truffle console # JS dev environment
 ```
+
+## Docs
+
+[Style Guide](https://docs.soliditylang.org/en/v0.5.3/style-guide.html)
