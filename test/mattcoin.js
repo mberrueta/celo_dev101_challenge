@@ -50,8 +50,7 @@ contract("MattCoin", ([owner, investor_a, investor_b]) => {
       });
 
       it("reject send coins to 0 address", async () => {
-        zero_address = 0x0000000000000000000000000000000000000000
-        await mattCoin.transfer(zero_address, 1).should.be.rejected;
+        await mattCoin.transfer(0x0000000000000000000000000000000000000000, 1).should.be.rejected;
       });
     });
   });
