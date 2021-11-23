@@ -14,8 +14,6 @@ library Library {
 }
 
 contract BankToken {
-    address private owner;
-
     string public name = "stake Bank Token";
     MattCoin public mattCoin;
     IERC20 public cUSD;
@@ -24,12 +22,16 @@ contract BankToken {
     mapping(address => Library.stake) public stakingBalance;
     mapping(address => uint256) public pendingCoins;
 
+    // TODO: move to something common
+    event LogInt(uint256 _value);
+    event LogString(string _value);
+    event LogAddress(address _value);
+
     // constructor
 
     // cUSD (Alfajores testnet) = "0x874069Fa1Eb16D44d622F2e0Ca25eeA172369bC1"
     // cUSD (Celo mainnet) =      "0x765DE816845861e75A25fCA122bb6898B8B1282a"
     constructor(MattCoin _mattCoin, IERC20 _cUSD) {
-        owner = msg.sender;
         mattCoin = _mattCoin;
         cUSD = _cUSD;
     }
@@ -47,8 +49,15 @@ contract BankToken {
         bool flexible,
         uint256 period
     ) public {
+        // emit LogInt(_amount);
+        // emit LogInt(timestamp);
+        // emit LogInt(period);
+        // emit LogString("bank owner");
+        // emit LogAddress(msg.sender);
+        // emit LogAddress(address(this));
+
         require(_amount > 0, "amount needs to be positive"); // raise ex if is false
-        require(ownerStaking(), "only 1 stake per account is allowed");
+        require(!ownerStaking(), "only 1 stake per account is allowed");
 
         if (flexible) {
             require(
@@ -60,10 +69,10 @@ contract BankToken {
         }
 
         // Trasnfer cUSD tokens to this contract for staking
-        cUSD.transferFrom(owner, address(this), _amount);
+        cUSD.transferFrom(msg.sender, address(this), _amount);
 
         // update staking balance
-        stakingBalance[owner] = Library.stake(
+        stakingBalance[msg.sender] = Library.stake(
             _amount,
             timestamp,
             flexible,
@@ -72,25 +81,48 @@ contract BankToken {
 
         if (flexible) {
             // give 1 per day
-            pendingCoins[owner] += 1;
+            pendingCoins[msg.sender] += 1;
         } else {
             // give 2 per day
-            pendingCoins[owner] += 2 * period;
+            pendingCoins[msg.sender] += 2 * period;
         }
     }
 
+    // 1 unstakes Tokens (withdraw)
+    function unStakeTokens() public {
+        require(ownerStaking(), "account isn't currently staking");
+
+        Library.stake memory current = stakingBalance[msg.sender];
+        // withdraw
+        cUSD.transfer(msg.sender, current.amount);
+
+        if (current.flexible) {
+            // give 1 per day
+            mattCoin.transfer(msg.sender, elapsedDays());
+        } else {
+            require(elapsedDays() > current.period, "not yet available");
+            // give 2 per day
+            mattCoin.transfer(msg.sender, elapsedDays() * 2);
+        }
+    }
+
+    // internal
+    function elapsedDays() internal view returns (uint256) {
+        uint256 difference = block.timestamp -
+            stakingBalance[msg.sender].timestamp;
+        return difference / 1000 / 60 / 60 / 24;
+    }
+
+    // private
     function ownerFlexibleStaking() private view returns (bool) {
-        if (stakingBalance[owner].flexible) {
+        if (stakingBalance[msg.sender].flexible) {
             return true;
         }
         return false;
     }
 
-    // internal
-    // private
-
     function ownerStaking() private view returns (bool) {
-        if (stakingBalance[owner].amount > 0) {
+        if (stakingBalance[msg.sender].amount > 0) {
             return true;
         }
         return false;

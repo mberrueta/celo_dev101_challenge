@@ -12,12 +12,6 @@ require("chai").use(require("chai-as-promised")).should();
 contract("MattCoin", ([owner, investor_a, investor_b]) => {
   context("when is deployed", async () => {
     describe(".balanceOf", async () => {
-      it("put 10000 MattCoin in the first account", async () => {
-        let mc = await MattCoin.deployed();
-        let balance = await mc.balanceOf(investor_a);
-        assert.equal(balance, 10, "10 wasn't in the first account");
-      });
-
       it("doesn't give coins to 2nd account", async () => {
         let mc = await MattCoin.deployed();
         let balance = await mc.balanceOf(investor_b);
@@ -44,13 +38,14 @@ contract("MattCoin", ([owner, investor_a, investor_b]) => {
 
     describe(".transfer", async () => {
       it("send 10 coins to B", async () => {
-        await mattCoin.transfer(investor_b, 10);
-        let balance = await mattCoin.balanceOf(investor_b);
+        await mattCoin.transfer(investor_a, 10);
+        let balance = await mattCoin.balanceOf(investor_a);
         assert.equal(balance, 10, "second account doesn't have 10 coins");
       });
 
       it("reject send coins to 0 address", async () => {
-        await mattCoin.transfer(0x0000000000000000000000000000000000000000, 1).should.be.rejected;
+        await mattCoin.transfer(0x0000000000000000000000000000000000000000, 1)
+          .should.be.rejected;
       });
     });
   });
