@@ -109,6 +109,20 @@ truffle test
 truffle console # JS dev environment
 ```
 
+## Deploy contracts
+
+### Alfajores net
+
+Import contracts to [remix](https://remix.ethereum.org/#optimize=false&runs=200&evmVersion=null&version=soljson-v0.8.7+commit.e28d00a7.js)
+
+deploy `IER20.sol`, `MattCoin.sol` (copy contract address), sett in `BankToken.sol` the mattCoin address, the celo alfajores address (`0x874069Fa1Eb16D44d622F2e0Ca25eeA172369bC1`)
+
+Deployed:
+
+- IER20.sol: 0xe5a769BEe2AD606d2De4cc64fadDB4c17E9874c0
+- MattCoin.sol: 0xbAAF3d3C03f05E048c8082b570C7af89E4B11519
+- BankToken.sol: 0xdf1AF8D765853C9a29094A4D3204B9a02e0597A0
+
 ## Docs
 
 [Style Guide](https://docs.soliditylang.org/en/v0.5.3/style-guide.html)
