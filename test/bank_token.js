@@ -3,7 +3,6 @@ const MattCoin = artifacts.require("MattCoin");
 const BankToken = artifacts.require("BankToken");
 
 import { assert } from "chai";
-import { BigNumber } from "@ethersproject/bignumber";
 
 require("chai").use(require("chai-as-promised")).should();
 
@@ -30,7 +29,6 @@ contract("BankToken", ([owner, investor]) => {
           "stake Bank Token",
           "bank token in not properly deployed"
         );
-
         let cuAddress = await bt.cUSD();
         assert.equal(
           cuAddress,
@@ -52,12 +50,15 @@ contract("BankToken", ([owner, investor]) => {
     let cUSDMockCoin;
     let mattCoin;
     let bankToken;
-    let nowTimestamp;
 
     beforeEach(async () => {
       cUSDMockCoin = await CUSDMock.new();
       mattCoin = await MattCoin.new();
-      bankToken = await BankToken.new(mattCoin.address, cUSDMockCoin.address);
+      bankToken = await BankToken.new(
+        mattCoin.address,
+        cUSDMockCoin.address,
+        true
+      );
 
       // console.log("owner", owner);
       // console.log("investor", investor);
@@ -71,8 +72,6 @@ contract("BankToken", ([owner, investor]) => {
 
       // Transfer all MattCoins to Bank
       await mattCoin.transfer(bankToken.address, tokens(10000));
-
-      nowTimestamp = new Date().getTime();
     });
 
     context(".constructor", async () => {
@@ -88,7 +87,6 @@ contract("BankToken", ([owner, investor]) => {
 
     context(".stakeTokens", async () => {
       it("stake 100 flexible coins successfully", async () => {
-        // console.log("===1====");
         let result = await cUSDMockCoin.balanceOf(investor);
         assert.equal(
           result,
@@ -96,17 +94,12 @@ contract("BankToken", ([owner, investor]) => {
           "investor cUSD mock wallet balance is correct before staking"
         );
 
-        // console.log("===2====", nowTimestamp);
         await cUSDMockCoin.approve(bankToken.address, tokens(30), {
           from: investor,
         });
 
-        // console.log("===3====", nowTimestamp);
-        await bankToken.stakeTokens(tokens(30), nowTimestamp, true, 0, {
-          from: investor,
-        });
+        await bankToken.stakeTokens(tokens(30), true, 0, { from: investor });
 
-        // console.log("===4====");
         result = await cUSDMockCoin.balanceOf(investor);
         assert.equal(
           result,
@@ -116,9 +109,8 @@ contract("BankToken", ([owner, investor]) => {
       });
 
       it("prohibit send 0 coins", async () => {
-        await bankToken.stakeTokens(0, nowTimestamp, true, 0, {
-          from: investor,
-        }).should.be.rejected;
+        await bankToken.stakeTokens(0, true, 0, { from: investor }).should.be
+          .rejected;
       });
 
       it("prohibit second stake", async () => {
@@ -126,14 +118,11 @@ contract("BankToken", ([owner, investor]) => {
           from: investor,
         });
 
-        await bankToken.stakeTokens(tokens(10), nowTimestamp, true, 0, {
-          from: investor,
-        });
+        await bankToken.stakeTokens(tokens(10), true, 0, { from: investor });
 
         // second stake
-        await bankToken.stakeTokens(tokens(10), nowTimestamp, true, 0, {
-          from: investor,
-        }).should.be.rejected;
+        await bankToken.stakeTokens(tokens(10), true, 0, { from: investor })
+          .should.be.rejected;
       });
 
       it("prohibit send fixed period in flexible stake", async () => {
@@ -141,9 +130,8 @@ contract("BankToken", ([owner, investor]) => {
           from: investor,
         });
 
-        await bankToken.stakeTokens(tokens(10), nowTimestamp, true, 10, {
-          from: investor,
-        }).should.be.rejected;
+        await bankToken.stakeTokens(tokens(10), true, 10, { from: investor })
+          .should.be.rejected;
       });
 
       it("prohibit send 0 days period in locked stake", async () => {
@@ -151,9 +139,168 @@ contract("BankToken", ([owner, investor]) => {
           from: investor,
         });
 
-        await bankToken.stakeTokens(tokens(10), nowTimestamp, false, 0, {
+        await bankToken.stakeTokens(tokens(10), false, 0, { from: investor })
+          .should.be.rejected;
+      });
+    });
+
+    context(".unStakeTokens", async () => {
+      it("unstake 1 flexible coins successfully", async () => {
+        await cUSDMockCoin.approve(bankToken.address, tokens(30), {
           from: investor,
-        }).should.be.rejected;
+        });
+        await bankToken.stakeTokens(tokens(30), true, 0, { from: investor });
+        await bankToken.increaseTimestampMinutes(1);
+        await bankToken.unStakeTokens({ from: investor });
+
+        let result = await cUSDMockCoin.balanceOf(investor);
+        assert.equal(
+          result,
+          tokens(100),
+          "investor cUSD mock wallet balance is correct after unstake"
+        );
+
+        result = await mattCoin.balanceOf(investor);
+        assert.equal(
+          result,
+          tokens(1),
+          "investor mattCoin wallet balance is correct after unstake"
+        );
+      });
+
+      it("unstake 5m (x2) locked coins successfully", async () => {
+        await cUSDMockCoin.approve(bankToken.address, tokens(30), {
+          from: investor,
+        });
+        await bankToken.stakeTokens(tokens(30), false, 5, { from: investor });
+
+        await bankToken.increaseTimestampMinutes(5);
+
+        await bankToken.unStakeTokens({ from: investor });
+
+        let result = await cUSDMockCoin.balanceOf(investor);
+        assert.equal(
+          result,
+          tokens(100),
+          "investor cUSD mock wallet balance is correct after unstake"
+        );
+
+        result = await mattCoin.balanceOf(investor);
+        // 5m * 2
+        assert.equal(
+          result,
+          tokens(10),
+          "investor mattCoin wallet balance is correct after unstake"
+        );
+      });
+
+      it("unstake 60m (x3) locked coins successfully", async () => {
+        await cUSDMockCoin.approve(bankToken.address, tokens(30), {
+          from: investor,
+        });
+        await bankToken.stakeTokens(tokens(30), false, 60, { from: investor });
+
+        await bankToken.increaseTimestampMinutes(60);
+
+        await bankToken.unStakeTokens({ from: investor });
+
+        let result = await cUSDMockCoin.balanceOf(investor);
+        assert.equal(
+          result,
+          tokens(100),
+          "investor cUSD mock wallet balance is correct after unstake"
+        );
+
+        result = await mattCoin.balanceOf(investor);
+        // 60m * 3
+        assert.equal(
+          result,
+          tokens(180),
+          "investor mattCoin wallet balance is correct after unstake"
+        );
+      });
+
+      it("unstake 150m (x4) locked coins successfully", async () => {
+        await cUSDMockCoin.approve(bankToken.address, tokens(30), {
+          from: investor,
+        });
+        await bankToken.stakeTokens(tokens(30), false, 150, { from: investor });
+
+        await bankToken.increaseTimestampMinutes(150);
+
+        await bankToken.unStakeTokens({ from: investor });
+
+        let result = await cUSDMockCoin.balanceOf(investor);
+        assert.equal(
+          result,
+          tokens(100),
+          "investor cUSD mock wallet balance is correct after unstake"
+        );
+
+        result = await mattCoin.balanceOf(investor);
+        // 150m * 4
+        assert.equal(
+          result,
+          tokens(600),
+          "investor mattCoin wallet balance is correct after unstake"
+        );
+      });
+
+      it("reject unstake until period ends", async () => {
+        await cUSDMockCoin.approve(bankToken.address, tokens(30), {
+          from: investor,
+        });
+        await bankToken.stakeTokens(tokens(30), false, 150, { from: investor });
+
+        await bankToken.increaseTimestampMinutes(100);
+
+        await bankToken.unStakeTokens({ from: investor }).should.be.rejected;
+      });
+
+      it("reject unstake if it's not staking", async () => {
+        await bankToken.unStakeTokens({ from: investor }).should.be.rejected;
+      });
+    });
+
+    context(".pendingReward", async () => {
+      it("has 1 flexible coins", async () => {
+        await cUSDMockCoin.approve(bankToken.address, tokens(30), {
+          from: investor,
+        });
+        await bankToken.stakeTokens(tokens(30), true, 0, { from: investor });
+        await bankToken.increaseTimestampMinutes(1);
+        let result = await bankToken.pendingReward({ from: investor });
+        assert.equal(result, tokens(1), "pending isn't correct");
+      });
+
+      it("has 5m (x2) locked coins", async () => {
+        await cUSDMockCoin.approve(bankToken.address, tokens(30), {
+          from: investor,
+        });
+        await bankToken.stakeTokens(tokens(30), false, 5, { from: investor });
+        await bankToken.increaseTimestampMinutes(5);
+        let result = await bankToken.pendingReward({ from: investor });
+        assert.equal(result, tokens(10), "pending isn't correct");
+      });
+
+      it("has 60m (x3) locked coins", async () => {
+        await cUSDMockCoin.approve(bankToken.address, tokens(30), {
+          from: investor,
+        });
+        await bankToken.stakeTokens(tokens(30), false, 60, { from: investor });
+        await bankToken.increaseTimestampMinutes(60);
+        let result = await bankToken.pendingReward({ from: investor });
+        assert.equal(result, tokens(180), "pending isn't correct");
+      });
+
+      it("has 120m (x4) locked coins", async () => {
+        await cUSDMockCoin.approve(bankToken.address, tokens(30), {
+          from: investor,
+        });
+        await bankToken.stakeTokens(tokens(30), false, 120, { from: investor });
+        await bankToken.increaseTimestampMinutes(120);
+        let result = await bankToken.pendingReward({ from: investor });
+        assert.equal(result, tokens(480), "pending isn't correct");
       });
     });
   });

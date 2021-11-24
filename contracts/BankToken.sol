@@ -20,7 +20,8 @@ contract BankToken {
 
     using Library for Library.stake;
     mapping(address => Library.stake) public stakingBalance;
-    mapping(address => uint256) public pendingCoins;
+    bool private testing;
+    uint256 private testingTimestamp;
 
     // TODO: move to something common
     event LogInt(uint256 _value);
@@ -31,9 +32,15 @@ contract BankToken {
 
     // cUSD (Alfajores testnet) = "0x874069Fa1Eb16D44d622F2e0Ca25eeA172369bC1"
     // cUSD (Celo mainnet) =      "0x765DE816845861e75A25fCA122bb6898B8B1282a"
-    constructor(MattCoin _mattCoin, IERC20 _cUSD) {
+    constructor(
+        MattCoin _mattCoin,
+        IERC20 _cUSD,
+        bool _testing
+    ) {
         mattCoin = _mattCoin;
         cUSD = _cUSD;
+        testing = _testing;
+        testingTimestamp = block.timestamp;
     }
 
     // fallback function (if exists)
@@ -45,7 +52,6 @@ contract BankToken {
     // 1 stakes Tokens (get rewards)
     function stakeTokens(
         uint256 _amount,
-        uint256 timestamp,
         bool flexible,
         uint256 period
     ) public {
@@ -74,18 +80,10 @@ contract BankToken {
         // update staking balance
         stakingBalance[msg.sender] = Library.stake(
             _amount,
-            timestamp,
+            block.timestamp,
             flexible,
             period
         );
-
-        if (flexible) {
-            // give 1 per day
-            pendingCoins[msg.sender] += 1;
-        } else {
-            // give 2 per day
-            pendingCoins[msg.sender] += 2 * period;
-        }
     }
 
     // 1 unstakes Tokens (withdraw)
@@ -93,24 +91,51 @@ contract BankToken {
         require(ownerStaking(), "account isn't currently staking");
 
         Library.stake memory current = stakingBalance[msg.sender];
+        if (!current.flexible) {
+            require(elapsedMinutes() >= current.period, "not yet available");
+        }
         // withdraw
         cUSD.transfer(msg.sender, current.amount);
+        mattCoin.transfer(msg.sender, pendingReward());
+    }
+
+    function pendingReward() public view returns (uint256) {
+        Library.stake memory current = stakingBalance[msg.sender];
 
         if (current.flexible) {
-            // give 1 per day
-            mattCoin.transfer(msg.sender, elapsedDays());
+            // give 1 per minute
+            return elapsedMinutes() * 1000000000000000000;
         } else {
-            require(elapsedDays() > current.period, "not yet available");
-            // give 2 per day
-            mattCoin.transfer(msg.sender, elapsedDays() * 2);
+            if (current.period < 30) {
+                // 2 per min in half hour
+                return elapsedMinutes() * 1000000000000000000 * 2;
+            } else if (current.period < 120) {
+                // 3 per min in 2 hours
+                return elapsedMinutes() * 1000000000000000000 * 3;
+            }
+        }
+        // 4 per min in 2+ hours
+        return elapsedMinutes() * 1000000000000000000 * 4;
+    }
+
+    function increaseTimestampMinutes(uint256 value) public {
+        if (testing) {
+            testingTimestamp = block.timestamp + value * 60 * 1000;
         }
     }
 
     // internal
-    function elapsedDays() internal view returns (uint256) {
-        uint256 difference = block.timestamp -
-            stakingBalance[msg.sender].timestamp;
-        return difference / 1000 / 60 / 60 / 24;
+    function elapsedMinutes() internal view returns (uint256) {
+        uint256 difference = 0;
+
+        if (testing) {
+            difference =
+                testingTimestamp -
+                stakingBalance[msg.sender].timestamp;
+        } else {
+            difference = block.timestamp - stakingBalance[msg.sender].timestamp;
+        }
+        return difference / 1000 / 60;
     }
 
     // private
