@@ -4,7 +4,7 @@
   "description": "Celo Token Staking App",
   "author": "matiasberrueta@gmail.com",
   "dependencies": {
-    "@celo/contractkit": "^1.3.3",
+    "@celo/contractkit": "^1.4",
     "@truffle/hdwallet-provider": "^1.7.0",
     "animate.css": "^4.1.1",
     "bignumber.js": "^9.0.1",

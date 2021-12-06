@@ -8,44 +8,52 @@ class AlertDismissible extends React.Component {
     super(props, context);
 
     this.handleDismiss = this.handleDismiss.bind(this);
-    this.handleShow = this.handleShow.bind(this);
 
     this.state = {
-      show: true,
+      show: this.props.show,
+      title: this.props.title,
+      message: this.props.message,
     };
   }
 
   handleDismiss() {
     this.setState({ show: false });
+    this.props.handler();
   }
 
-  handleShow() {
-    this.setState({ show: true });
+  static getDerivedStateFromProps(nextProps, prevState) {
+    if (nextProps.show !== prevState.show) {
+      return {
+        show: nextProps.show,
+        title: nextProps.title,
+        message: nextProps.message,
+      }; // <- this is setState equivalent
+    }
+    return null;
   }
 
   render() {
     if (this.state.show) {
       return (
-        <Alert bsStyle="danger" onDismiss={this.handleDismiss}>
-          <h4>Oh snap! You got an error!</h4>
+        <Alert>
+          <h4>{this.state.title}</h4>
+          <p>{this.state.message}</p>
           <p>
-            Change this and that and try again. Duis mollis, est non commodo
-            luctus, nisi erat porttitor ligula, eget lacinia odio sem nec elit.
-            Cras mattis consectetur purus sit amet fermentum.
-          </p>
-          <p>
-            <Button onClick={this.handleDismiss}>Hide Alert</Button>
+            <Button onClick={this.handleDismiss}>Ok</Button>
           </p>
         </Alert>
       );
     }
 
-    return <Button onClick={this.handleShow}>Show Alert</Button>;
+    return <div> </div>;
   }
 }
 
 AlertDismissible.propTypes = {
   show: PropTypes.bool,
+  title: PropTypes.string,
+  message: PropTypes.string,
+  handler: PropTypes.func,
 };
 
 export default AlertDismissible;
