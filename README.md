@@ -123,6 +123,12 @@ Deployed:
 - MattCoin.sol: 0xbAAF3d3C03f05E048c8082b570C7af89E4B11519
 - BankToken.sol: 0xdf1AF8D765853C9a29094A4D3204B9a02e0597A0
 
+## Run
+
+```sh
+npm run start
+```
+
 ## Docs
 
 [Style Guide](https://docs.soliditylang.org/en/v0.5.3/style-guide.html)
