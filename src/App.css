@@ -1,5 +1,4 @@
 .App {
-  text-align: center;
   background-color: #282c34;
   color: white;
 }
@@ -47,5 +46,9 @@
 }
 
 .row {
-  width: 100%
+  width: 100%;
+}
+
+div.alert {
+  text-align: center;
 }
