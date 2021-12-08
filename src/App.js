@@ -1,7 +1,7 @@
 import "./App.css";
 
-import { BankToken } from "./abis/BankToken.json";
-import { IERC20 } from "./abis/IERC20.json";
+import BankToken from "./abis/BankToken.json";
+import IERC20 from "./abis/IERC20.json";
 import MattCoin from "./abis/MattCoin.json";
 import Navbar from "./components/Navbar";
 
@@ -21,6 +21,8 @@ import {
   Button,
 } from "react-bootstrap";
 import * as React from "react";
+import { Formik } from "formik";
+
 import AlertDismissible from "./components/AlertDismissible";
 
 let kit;
@@ -30,30 +32,40 @@ const BANK_TOKEN_ADDRESS = "0xdf1AF8D765853C9a29094A4D3204B9a02e0597A0";
 const CELO_ADDRESS = "0xe5a769BEe2AD606d2De4cc64fadDB4c17E9874c0";
 const MATT_COIN_ADDRESS = "0xbAAF3d3C03f05E048c8082b570C7af89E4B11519";
 
+let mattCoinContract;
+let celoContract;
+let bankContract;
+let mattCoinContractMethods;
+let celoContractMethods;
+let bankContractMethods;
+
 class App extends React.Component {
   constructor(props) {
     super(props);
     this.handler = this.handler.bind(this);
+    this.handleSubmit = this.handleSubmit.bind(this);
     this.state = {
       account: "0x0",
-      celoToken: {},
-      mattCoin: {},
-      bank: {},
       celoTokenBalance: "0",
       cUSDTokenBalance: "0",
       mattCoinBalance: "0",
       stakingBalance: "0",
+      pendingBalance: "0",
       loading: true,
       showAlert: false,
       title: "",
       message: "",
+      fixed: false,
+      tokensToStake: 0,
+      locked: 0
     };
   }
 
   async componentDidMount() {
+    this.setState({ loading: true });
     await this.loadWeb3();
-    await this.loadBlockchainData();
     await this.getBalance();
+    this.setState({ loading: false });
   }
 
   // Connect app to the blockchain
@@ -68,6 +80,14 @@ class App extends React.Component {
         // const web3 = new Web3("https://alfajores-forno.celo-testnet.org")
         const web3 = new Web3(window.celo);
         kit = newKitFromWeb3(web3);
+        mattCoinContract = new kit.web3.eth.Contract(
+          MattCoin,
+          MATT_COIN_ADDRESS
+        );
+        celoContract = new kit.web3.eth.Contract(IERC20, CELO_ADDRESS);
+        bankContract = new kit.web3.eth.Contract(BankToken, BANK_TOKEN_ADDRESS);
+        mattCoinContractMethods = await mattCoinContract.methods;
+        bankContractMethods = await bankContract.methods;
 
         let accounts = await kit.web3.eth.getAccounts();
         console.info(accounts[0]);
@@ -85,108 +105,49 @@ class App extends React.Component {
     const totalBalance = await kit.getTotalBalance(kit.defaultAccount);
     const cUSDBalance = totalBalance.cUSD.shiftedBy(-ERC20_DECIMALS).toFixed(2);
     const celoBalance = totalBalance.CELO.shiftedBy(-ERC20_DECIMALS).toFixed(2);
-    this.setState({
-      celoTokenBalance: celoBalance,
-      cUSDTokenBalance: cUSDBalance,
-    });
-  }
 
-  async loadBlockchainData() {
-    const web3 = new Web3(window.celo);
-    let kit = newKitFromWeb3(web3);
-    // Check the Celo network ID
-    const networkId = await web3.eth.net.getId();
-    console.log(networkId);
-
-    // c// console.log(methods);
-
-    const contract = new kit.web3.eth.Contract(MattCoin, MATT_COIN_ADDRESS);
-
-    const methods = await contract.methods;
-    console.log(methods);
-
-    let mattCoinBalance = await methods.balanceOf(this.state.account).call();
+    let mattCoinBalance = await mattCoinContractMethods
+      .balanceOf(this.state.account)
+      .call({ from: this.state.account });
     mattCoinBalance = new BigNumber(mattCoinBalance)
       .shiftedBy(-ERC20_DECIMALS)
       .toFixed(2);
-    this.setState({ mattCoinBalance: mattCoinBalance });
-    // Get the contract associated with the current network
-    // const deployedNetwork = MattCoin.networks[networkId]
 
-    // Create a new contract instance with the HelloWorld contract info
-    // let instance = new kit.web3.eth.Contract(
-    //   MattCoin.abi,
-    //     deployedNetwork && deployedNetwork.address
-    // )
+    let pendingBalance = await bankContractMethods
+      .pendingReward()
+      .call({ from: this.state.account });
+    pendingBalance = new BigNumber(pendingBalance)
+      .shiftedBy(-ERC20_DECIMALS)
+      .toFixed(2);
 
-    // getName(instance)
-    // setName(instance, "hello world!")
+    // TODO: Add method to contract
+    //  let stakingBalance = await bankContractMethods.pendingReward().call({ from: this.state.account });
+    //   stakingBalance = new BigNumber(stakingBalance)
+    //     .shiftedBy(-ERC20_DECIMALS)
+    //     .toFixed(2);
+    let stakingBalance = 0;
 
-    // // load MattCoin
-    // const mattCoinData = MattCoin.networks[networkId];
-    // console.log(mattCoinData);
-    // if (mattCoinData) {
-    //   const mattCoin = new web3.eth.Contract(
-    //     MattCoin.abi,
-    //     mattCoinData.address
-    //   );
-    //   this.setState({ mattCoin });
-    //   let mattCoinBalance = await mattCoin.methods
-    //     .balanceOf(this.state.account)
-    //     .call();
-    //   console.log({ matt_balance: mattCoinBalance });
-    //   this.setState({ mattCoinBalance: mattCoinBalance.toString() });
-    // } else {
-    //   window.alert("MattCoin Contract not deployed in current network");
-    // }
+    //TODO: fix current wrong number
+    // pendingBalance = 0
 
-    // // load dappToken
-    // const dappTokenData = DappToken.networks[networkId];
-    // console.log("dapp", dappTokenData);
-    // if (dappTokenData) {
-    //   const dappToken = new web3.eth.Contract(
-    //     DappToken.abi,
-    //     dappTokenData.address
-    //   );
-    //   this.setState({ dappToken });
-    //   let dappTokenBalance = await dappToken.methods
-    //     .balanceOf(this.state.account)
-    //     .call();
-    //   console.log({ dapp_balance: dappTokenBalance });
-    //   this.setState({ dappTokenBalance: dappTokenBalance.toString() });
-    // } else {
-    //   window.alert("DappToken Contract not deployed in current network");
-    // }
-
-    // // load tokenFarm
-    // const tokenFarmData = TokenFarm.networks[networkId];
-    // console.log("token farm", tokenFarmData);
-    // if (tokenFarmData) {
-    //   const tokenFarm = new web3.eth.Contract(
-    //     TokenFarm.abi,
-    //     tokenFarmData.address
-    //   );
-    //   this.setState({ tokenFarm });
-    //   let stakingBalance = await tokenFarm.methods
-    //     .stakingBalance(this.state.account)
-    //     .call();
-    //   console.log({ token_farm: stakingBalance });
-    //   this.setState({ stakingBalance: stakingBalance.toString() });
-    // } else {
-    //   window.alert("TokenFarm Contract not deployed in current network");
-    // }
-
-    this.setState({ loading: false });
+    this.setState({
+      celoTokenBalance: celoBalance,
+      cUSDTokenBalance: cUSDBalance,
+      mattCoinBalance: mattCoinBalance,
+      pendingBalance: pendingBalance,
+      stakingBalance: stakingBalance,
+    });
   }
 
-  stakeTokens = (amount) => {
+  stakeTokens = (amount, flexible, minutes) => {
     this.setState({ loading: true });
-    this.state.daiToken.methods
-      .approve(this.state.tokenFarm._address, amount)
+
+    mattCoinContractMethods
+      .approve(BANK_TOKEN_ADDRESS, amount)
       .send({ from: this.state.account })
       .on("transactionHash", (hash) => {
-        this.state.tokenFarm.methods
-          .stakeTokens(amount)
+        bankContractMethods
+          .stakeTokens(amount, flexible, minutes)
           .send({ from: this.state.account })
           .on("transactionHash", (hash) => {
             this.setState({ loading: false });
@@ -194,10 +155,11 @@ class App extends React.Component {
       });
   };
 
-  unstakeTokens = (amount) => {
+  unstakeTokens = () => {
     this.setState({ loading: true });
-    this.state.tokenFarm.methods
-      .unstakeTokens()
+
+    bankContractMethods
+      .unStakeTokens()
       .send({ from: this.state.account })
       .on("transactionHash", (hash) => {
         this.setState({ loading: false });
@@ -210,6 +172,11 @@ class App extends React.Component {
 
   handler() {
     this.setState({ showAlert: false });
+  }
+
+  handleSubmit(evt) {
+    // this.setState({});
+    console.log(this.state.tokensToStake, this.state.fixed, this.state.locked)
   }
 
   render() {
@@ -237,7 +204,7 @@ class App extends React.Component {
                   <tr>
                     <td>1</td>
                     <td>Celo Balance</td>
-                    <td className="text-end" >{this.state.celoTokenBalance}</td>
+                    <td className="text-end">{this.state.celoTokenBalance}</td>
                   </tr>
                   <tr>
                     <td>2</td>
@@ -249,6 +216,16 @@ class App extends React.Component {
                     <td>mattCoin Balance</td>
                     <td className="text-end">{this.state.mattCoinBalance}</td>
                   </tr>
+                  <tr>
+                    <td>4</td>
+                    <td>Current Staking</td>
+                    <td className="text-end">{this.state.stakingBalance}</td>
+                  </tr>
+                  <tr>
+                    <td>5</td>
+                    <td>Pending Rewards</td>
+                    <td className="text-end">{this.state.pendingBalance}</td>
+                  </tr>
                 </tbody>
               </Table>
             </Col>
@@ -256,14 +233,69 @@ class App extends React.Component {
           <Row>
             <Col>
               {" "}
-              <Form>
-                <Form.Group className="mb-3" controlId="formBasicEmail">
-                  <Form.Label>Email address</Form.Label>
-                  <Form.Control type="email" placeholder="Enter email" />
-                  <Form.Text className="text-muted">
-                    Well never share your email with anyone else.
-                  </Form.Text>
+              <Form onSubmit={this.handleSubmit}>
+                <Form.Group className="mb-3" as={Col} md="4" controlId="tokens">
+                  <Form.Label>Tokens To stake</Form.Label>
+
+                  <Form.Control
+                    type="number"
+                    name="tokens"
+                    className="mb-3"
+                    value={this.state.tokensToStake}
+                    onChange={e => this.setState({ tokensToStake: e.target.value })}
+                  />
                 </Form.Group>
+
+                <Form.Group className="mb-3" controlId="Fixed">
+                  <Form.Label>
+                    Flexible or Fixed days. With flexible you can unstake at any
+                    time
+                  </Form.Label>
+                  <Form.Check
+                    type="switch"
+                    id="custom-switch"
+                    label="Fixed"
+                    checked={this.state.fixed}
+                    onChange={e => this.setState({ fixed: e.target.checked })}
+                  />
+                </Form.Group>
+
+                <fieldset>
+                  <Form.Group
+                    as={Row}
+                    className="mb-3"
+                    style={
+                      this.state.fixed ? {} : { display: "none" }
+                    }
+                  >
+                    <Form.Label as="legend" column sm={2}>
+                      Radios
+                    </Form.Label>
+                    <Col sm={10}>
+                      <Form.Check
+                        type="radio"
+                        label="5m (x2 coins per min)"
+                        name="formHorizontalRadios"
+                        id="formHorizontalRadios1"
+                        onChange={e => this.setState({ locked: e.target.checked ? 5 : 0 })}
+                      />
+                      <Form.Check
+                        type="radio"
+                        label="60m (x3 coins per min)"
+                        name="formHorizontalRadios"
+                        id="formHorizontalRadios2"
+                        onChange={e => this.setState({ locked: e.target.checked ? 60 : 0 })}
+                      />
+                      <Form.Check
+                        type="radio"
+                        label="120m (x4 coins per min)"
+                        name="formHorizontalRadios"
+                        id="formHorizontalRadios3"
+                        onChange={e => this.setState({ locked: e.target.checked ? 120 : 0 })}
+                      />
+                    </Col>
+                  </Form.Group>
+                </fieldset>
 
                 <Button variant="primary" type="submit">
                   Submit
