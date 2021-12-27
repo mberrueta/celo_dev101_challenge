@@ -28,22 +28,26 @@ import AlertDismissible from "./components/AlertDismissible";
 let kit;
 const ERC20_DECIMALS = 18;
 
-const BANK_TOKEN_ADDRESS = "0xdf1AF8D765853C9a29094A4D3204B9a02e0597A0";
+const BANK_TOKEN_ADDRESS = "0xaAC08D3626e6EA28a53Ac3b436D277930A928F70";
 const CELO_ADDRESS = "0xe5a769BEe2AD606d2De4cc64fadDB4c17E9874c0";
+const CUSD_ADDRESS = "0x874069Fa1Eb16D44d622F2e0Ca25eeA172369bC1";
 const MATT_COIN_ADDRESS = "0xbAAF3d3C03f05E048c8082b570C7af89E4B11519";
 
 let mattCoinContract;
 let celoContract;
+let cUSDContract;
 let bankContract;
 let mattCoinContractMethods;
 let celoContractMethods;
+let cUSDContractMethods;
 let bankContractMethods;
 
 class App extends React.Component {
   constructor(props) {
     super(props);
     this.handler = this.handler.bind(this);
-    this.handleSubmit = this.handleSubmit.bind(this);
+    this.handleStake = this.handleStake.bind(this);
+    this.handleUnstake = this.handleUnstake.bind(this);
     this.state = {
       account: "0x0",
       celoTokenBalance: "0",
@@ -56,8 +60,8 @@ class App extends React.Component {
       title: "",
       message: "",
       fixed: false,
-      tokensToStake: 0,
-      locked: 0
+      tokensToStake: 1,
+      locked: 0,
     };
   }
 
@@ -80,13 +84,16 @@ class App extends React.Component {
         // const web3 = new Web3("https://alfajores-forno.celo-testnet.org")
         const web3 = new Web3(window.celo);
         kit = newKitFromWeb3(web3);
-        mattCoinContract = new kit.web3.eth.Contract(
-          MattCoin,
-          MATT_COIN_ADDRESS
-        );
         celoContract = new kit.web3.eth.Contract(IERC20, CELO_ADDRESS);
-        bankContract = new kit.web3.eth.Contract(BankToken, BANK_TOKEN_ADDRESS);
+        celoContractMethods = await celoContract.methods;
+
+        cUSDContract = new kit.web3.eth.Contract(IERC20, CUSD_ADDRESS);
+        cUSDContractMethods = await cUSDContract.methods;
+
+        mattCoinContract = new kit.web3.eth.Contract(MattCoin, MATT_COIN_ADDRESS);
         mattCoinContractMethods = await mattCoinContract.methods;
+
+        bankContract = new kit.web3.eth.Contract(BankToken, BANK_TOKEN_ADDRESS);
         bankContractMethods = await bankContract.methods;
 
         let accounts = await kit.web3.eth.getAccounts();
@@ -108,14 +115,14 @@ class App extends React.Component {
 
     let mattCoinBalance = await mattCoinContractMethods
       .balanceOf(this.state.account)
-      .call({ from: this.state.account });
+      .call();
     mattCoinBalance = new BigNumber(mattCoinBalance)
       .shiftedBy(-ERC20_DECIMALS)
       .toFixed(2);
 
     let pendingBalance = await bankContractMethods
       .pendingReward()
-      .call({ from: this.state.account });
+      .call();
     pendingBalance = new BigNumber(pendingBalance)
       .shiftedBy(-ERC20_DECIMALS)
       .toFixed(2);
@@ -134,20 +141,25 @@ class App extends React.Component {
       celoTokenBalance: celoBalance,
       cUSDTokenBalance: cUSDBalance,
       mattCoinBalance: mattCoinBalance,
-      pendingBalance: pendingBalance,
+      // pendingBalance: pendingBalance,
       stakingBalance: stakingBalance,
     });
+  }
+
+  tokens = (n) => {
+    return Web3.utils.toWei(n.toString(), "ether");
   }
 
   stakeTokens = (amount, flexible, minutes) => {
     this.setState({ loading: true });
 
-    mattCoinContractMethods
-      .approve(BANK_TOKEN_ADDRESS, amount)
+    console.log(cUSDContractMethods)
+    cUSDContractMethods
+      .approve(BANK_TOKEN_ADDRESS, this.tokens(amount))
       .send({ from: this.state.account })
       .on("transactionHash", (hash) => {
         bankContractMethods
-          .stakeTokens(amount, flexible, minutes)
+          .stakeTokens(this.tokens(amount), flexible, minutes)
           .send({ from: this.state.account })
           .on("transactionHash", (hash) => {
             this.setState({ loading: false });
@@ -174,9 +186,13 @@ class App extends React.Component {
     this.setState({ showAlert: false });
   }
 
-  handleSubmit(evt) {
-    // this.setState({});
-    console.log(this.state.tokensToStake, this.state.fixed, this.state.locked)
+  handleStake(evt) {
+    console.log(this.state.tokensToStake, !this.state.fixed, this.state.locked);
+    this.stakeTokens(this.state.tokensToStake, !this.state.fixed, this.state.locked);
+  }
+
+  handleUnstake(evt) {
+    this.unstakeTokens();
   }
 
   render() {
@@ -233,7 +249,7 @@ class App extends React.Component {
           <Row>
             <Col>
               {" "}
-              <Form onSubmit={this.handleSubmit}>
+              <Form >
                 <Form.Group className="mb-3" as={Col} md="4" controlId="tokens">
                   <Form.Label>Tokens To stake</Form.Label>
 
@@ -242,7 +258,9 @@ class App extends React.Component {
                     name="tokens"
                     className="mb-3"
                     value={this.state.tokensToStake}
-                    onChange={e => this.setState({ tokensToStake: e.target.value })}
+                    onChange={(e) =>
+                      this.setState({ tokensToStake: e.target.value })
+                    }
                   />
                 </Form.Group>
 
@@ -256,7 +274,7 @@ class App extends React.Component {
                     id="custom-switch"
                     label="Fixed"
                     checked={this.state.fixed}
-                    onChange={e => this.setState({ fixed: e.target.checked })}
+                    onChange={(e) => this.setState({ fixed: e.target.checked })}
                   />
                 </Form.Group>
 
@@ -264,9 +282,7 @@ class App extends React.Component {
                   <Form.Group
                     as={Row}
                     className="mb-3"
-                    style={
-                      this.state.fixed ? {} : { display: "none" }
-                    }
+                    style={this.state.fixed ? {} : { display: "none" }}
                   >
                     <Form.Label as="legend" column sm={2}>
                       Radios
@@ -277,28 +293,37 @@ class App extends React.Component {
                         label="5m (x2 coins per min)"
                         name="formHorizontalRadios"
                         id="formHorizontalRadios1"
-                        onChange={e => this.setState({ locked: e.target.checked ? 5 : 0 })}
+                        onChange={(e) =>
+                          this.setState({ locked: e.target.checked ? 5 : 0 })
+                        }
                       />
                       <Form.Check
                         type="radio"
                         label="60m (x3 coins per min)"
                         name="formHorizontalRadios"
                         id="formHorizontalRadios2"
-                        onChange={e => this.setState({ locked: e.target.checked ? 60 : 0 })}
+                        onChange={(e) =>
+                          this.setState({ locked: e.target.checked ? 60 : 0 })
+                        }
                       />
                       <Form.Check
                         type="radio"
                         label="120m (x4 coins per min)"
                         name="formHorizontalRadios"
                         id="formHorizontalRadios3"
-                        onChange={e => this.setState({ locked: e.target.checked ? 120 : 0 })}
+                        onChange={(e) =>
+                          this.setState({ locked: e.target.checked ? 120 : 0 })
+                        }
                       />
                     </Col>
                   </Form.Group>
                 </fieldset>
 
-                <Button variant="primary" type="submit">
-                  Submit
+                <Button variant="primary" type="button" onClick={this.handleStake}>
+                  stake
+                </Button>
+                <Button variant="primary" type="button" onClick={this.handleUnstake}>
+                  unstake
                 </Button>
               </Form>
             </Col>
